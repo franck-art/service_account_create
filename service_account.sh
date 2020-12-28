@@ -8,8 +8,8 @@
 # - Create a service account of all projects
 
 # Variables
-projects=`gcloud projects list | tail -n+2 | awk '{print $1}'` # List of projects
-ls_projects=`gcloud projects list | tail -n+2 | awk '{print $1}' | wc -l`
+projects=$(gcloud projects list | tail -n+2 | awk '{print $1}') # List of projects
+ls_projects=$(gcloud projects list | tail -n+2 | awk '{print $1}' | wc -l)
 serv_acc="terraform" # service account name of all projects
 
 # Functions definitions
@@ -35,10 +35,12 @@ function service_acc_create() {
 
 function length_list() {
 nb=0
-ls_service=`gcloud --project "${1}"  iam service-accounts list | awk '{print $2}' | tail -n+2 | cut -d '@' -f1`
+ls_service=$(gcloud --project "${1}"  iam service-accounts list | awk '{print $2}' | tail -n+2 | cut -d '@' -f1)
+echo "List of service account for project ${1} "
   for item in $ls_service
   do
-    nb=$(($nb+1))
+    echo -e "\033[35m ${item}"
+    nb=$((nb+1))
   done
 }
 
@@ -48,24 +50,24 @@ echo -e "\033[34m [START] \033[0m We have ${ls_projects} Projects"
 for project in $projects
 do
  i=0
- pos_project=$(($pos_project+1))
- echo -e "\033[34m [START]["${pos_project}"] \033[0m  Start with ${project} Project"
- nb_service=`gcloud --project "$project"  iam service-accounts list | tail -n+2 | wc -l`
-    if [ $nb_service -eq  0 ]; then
-      service_acc_create $project
+ pos_project=$((pos_project+1))
+ echo -e "\033[34m [START][${pos_project}] \033[0m  Start with ${project} Project"
+ nb_service=$(gcloud --project "$project"  iam service-accounts list | tail -n+2 | wc -l)
+    if [ "$nb_service" -eq  0 ]; then
+      service_acc_create "$project"
     else
-      ls_service=`gcloud --project "$project"  iam service-accounts list | awk '{print $2}' | tail -n+2 | cut -d '@' -f1`
+      ls_service=$(gcloud --project "$project"  iam service-accounts list | awk '{print $2}' | tail -n+2 | cut -d '@' -f1)
+      length_list "$project"
         for service_acc in $ls_service
         do
            if [ "$service_acc" != "$serv_acc" ]; then
-              i=$(($i+1))
-              length_list $project
+              i=$((i+1))
 #              echo "We have $nb account service"
                 if [ "$i" -eq "$nb" ]; then
-                    service_acc_create $project
+                    service_acc_create "$project"
                 fi
            else
-             echo -e "\033[31m [ALREADY EXIST] \033[0m A service account "$serv_acc" already exist for project "${project}" "
+             echo -e "\033[31m [ALREADY EXIST] \033[0m A service account ${serv_acc} already exist for project ${project} "
              break
            fi
         done
