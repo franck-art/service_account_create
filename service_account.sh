@@ -7,22 +7,24 @@
 # - Check if key exist for service account
 # - Create a service account of all projects
 
-# Variables
+# Variables to overload
+serv_acc="terraform-iam" # service account name of all projects
+role="owner" # Roles assign to service account
+
+# variables not to be modified
 projects=$(gcloud projects list | tail -n+2 | awk '{print $1}') # List of projects
 ls_projects=$(gcloud projects list | tail -n+2 | awk '{print $1}' | wc -l)
-serv_acc="terraform" # service account name of all projects
-
 # Functions definitions
 function service_acc_create() {
   gcloud --project "$1" iam service-accounts create ${serv_acc}\
-    --description="terraform automation" \
-    --display-name="terraform" &&\
+    --description="${2} automation" \
+    --display-name="${2}" &&\
   echo -e "\033[32m [OK] \033[0m Service Account Created" &&\
-  gcloud projects add-iam-policy-binding "$1" --member=serviceAccount:${serv_acc}@"${1}".iam.gserviceaccount.com --role=roles/owner &&\
+  gcloud projects add-iam-policy-binding "$1" --member=serviceAccount:${serv_acc}@"${1}".iam.gserviceaccount.com --role=roles/"$2" &&\
   echo -e "\033[32m [OK] \033[0m Service Account Owner Role Granted" &&\
-  gcloud --project "$1" iam service-accounts keys create ~/"${1}".json \
+  gcloud --project "$1" iam service-accounts keys create ~/"${1}"-"${2}".json \
     --iam-account ${serv_acc}@"${1}".iam.gserviceaccount.com &&\
-  echo -e "\033[32m [OK] \033[0m Service Account Key Created: \$HOME/${1}.json" &&\
+  echo -e "\033[32m [OK] \033[0m Service Account Key Created: \$HOME/${1}-${2}.json" &&\
   echo -e "\033[33m Don't Forget Adding serviceAccount:${serv_acc}@${1}.iam.gserviceaccount.com to the terraform project.\033[0m"
   EXCODE=$?
   if [ "$EXCODE" == "0" ]; then
@@ -54,7 +56,7 @@ do
  echo -e "\033[34m [START][${pos_project}] \033[0m  Start with ${project} Project"
  nb_service=$(gcloud --project "$project"  iam service-accounts list | tail -n+2 | wc -l)
     if [ "$nb_service" -eq  0 ]; then
-      service_acc_create "$project"
+      service_acc_create "$project" "$role"
     else
       ls_service=$(gcloud --project "$project"  iam service-accounts list | awk '{print $2}' | tail -n+2 | cut -d '@' -f1)
       length_list "$project"
@@ -64,7 +66,7 @@ do
               i=$((i+1))
 #              echo "We have $nb account service"
                 if [ "$i" -eq "$nb" ]; then
-                    service_acc_create "$project"
+                    service_acc_create "$project" "$role"
                 fi
            else
              echo -e "\033[31m [ALREADY EXIST] \033[0m A service account ${serv_acc} already exist for project ${project} "
